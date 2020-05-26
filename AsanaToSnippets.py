@@ -68,7 +68,7 @@ for s in sections:
         if modified_time > start_date:
             modified_tasks.append(task)
 
-snippets = open(f"AsanaSnippets_{start_date.strftime('%Y-%m-%d')}", "w")
+snippets = open(f"Snippets_{start_date.strftime('%Y-%m-%d')}", "w")
 snippets.write("**COMPLETED:**\n\n")
 for t in completed_tasks:
     create_snippet(t, snippets)
