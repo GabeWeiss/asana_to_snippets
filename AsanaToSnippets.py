@@ -32,6 +32,10 @@ def create_snippet(task, file):
     if task['notes']:
         file.write(f"   - {task['notes'].strip()}\n")
     subtasks = task['subtasks']
+    # Don't print out my subtasks if the task is complete
+    if task['completed']:
+        return
+
     if subtasks:
         for subtask in subtasks:
             if subtask['completed']:
