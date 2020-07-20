@@ -2,6 +2,7 @@ import asana
 import datetime
 import json
 import os
+import re
 import sys
 import time
 
@@ -28,9 +29,15 @@ start_date = datetime.datetime.now() - datetime.timedelta(weeks=1)
 
 def create_snippet(task, file):
     section = task['section']
-    file.write(f" - ({section}) - {task['name']}\n")
+    notes = None
     if task['notes']:
-        file.write(f"   - {task['notes'].strip()}\n")
+        notes = task['notes'].strip()
+        if re.search("#nolist", notes):
+            return
+
+    file.write(f" - ({section}) - {task['name']}\n")
+    if notes:
+        file.write(f"   - {notes}\n")
     subtasks = task['subtasks']
     # Don't print out my subtasks if the task is complete
     if task['completed']:
