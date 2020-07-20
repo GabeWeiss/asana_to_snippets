@@ -30,12 +30,25 @@ start_date = datetime.datetime.now() - datetime.timedelta(weeks=1)
 def create_snippet(task, file):
     section = task['section']
     notes = None
+    highlight = False
     if task['notes']:
         notes = task['notes'].strip()
         if re.search("#nolist", notes):
             return
 
-    file.write(f" - ({section}) - {task['name']}\n")
+        n = len(notes)
+        notes = re.sub("[\n]*#highlight", "", notes)
+        # test if we did in fact remove anything
+        if len(notes) < n:
+            highlight = True
+
+    file.write(f" - ")
+    if highlight:
+        file.write("**")
+    file.write(f"({section}) - {task['name']}")
+    if highlight:
+        file.write("**")
+    file.write("\n")
     if notes:
         file.write(f"   - {notes}\n")
     subtasks = task['subtasks']
