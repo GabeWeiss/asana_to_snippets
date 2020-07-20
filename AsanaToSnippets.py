@@ -31,10 +31,13 @@ def create_snippet(task, file):
     section = task['section']
     notes = None
     highlight = False
+    show_notes = True
     if task['notes']:
         notes = task['notes'].strip()
         if re.search("#nolist", notes):
             return
+        if re.search("#nonotes", notes):
+            show_notes = False
 
         n = len(notes)
         notes = re.sub("[\n]*#highlight", "", notes)
@@ -49,7 +52,7 @@ def create_snippet(task, file):
     if highlight:
         file.write("**")
     file.write("\n")
-    if notes:
+    if notes and show_notes:
         file.write(f"   - {notes}\n")
     subtasks = task['subtasks']
     # Don't print out my subtasks if the task is complete
