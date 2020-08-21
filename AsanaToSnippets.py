@@ -1,3 +1,4 @@
+import argparse
 import asana
 import datetime
 import json
@@ -5,6 +6,12 @@ import os
 import re
 import sys
 import time
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-s", "--start", help="This should be a date in the format yyyy-mm-dd")
+parser.add_argument("-e", "--end", help="This should be a date in the format yyyy-mm-dd")
+parser.add_argument("-w", "--weeks", help="How many weeks to fetch")
+args = parser.parse_args()
 
 # Get the project ID from the URL in the Asana front-end and update here
 # Right now, this only supports single project, but if there are folks
@@ -21,11 +28,38 @@ except:
 # for snippets. Case matters
 skip_sections = []
 
-# Represents how far back to fetch. Note that we're doing the past week
-# but for say, perf season, setting this back to that time period means
-# a nicely formatted dump of everything.
+# Get our bounds for time established. Default is one week back from "now"
 start_date = datetime.datetime.now() - datetime.timedelta(weeks=1)
+end_date = datetime.datetime.now()
+weeks = 1
 
+if args.weeks:
+    try:
+        weeks = int(args.weeks)
+    except:
+        print("Weeks must be a number")
+        sys.exit(1)
+
+if args.start:
+    try:
+        start_date = datetime.datetime.strptime(args.start, "%Y-%m-%d")
+    except:
+        print("Format for date must be yyyy/mm/dd")
+        sys.exit(1)
+    if not args.end:
+        end_date = start_date + datetime.timedelta(weeks=weeks)
+
+if args.end:
+    if args.end == "now" or args.end == "today":
+        end_date = datetime.datetime.now()
+    else:
+        try:
+            end_date = datetime.datetime.strptime(args.end, "%Y-%m-%d")
+        except:
+            print("Format for date must be yyyy/mm/dd")
+            sys.exit(1)
+    if not args.start:
+        start_date = end_date - datetime.timedelta(weeks=weeks)
 
 def create_snippet(task, file):
     section = task['section']
@@ -82,17 +116,17 @@ for s in sections:
         task['section'] = s['name']
         if task['completed']:
             complete_time = datetime.datetime.strptime(task['completed_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
-            if complete_time > start_date:
+            if complete_time > start_date and complete_time < end_date:
                 completed_tasks.append(task)
             continue
 
         created_time = datetime.datetime.strptime(task['created_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
-        if created_time > start_date:
+        if created_time > start_date and created_time < end_date:
             new_tasks.append(task)
             continue
 
         modified_time = datetime.datetime.strptime(task['modified_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
-        if modified_time > start_date:
+        if modified_time > start_date and modified_time < end_date:
             modified_tasks.append(task)
 
 snippets = open(f"Snippets_{start_date.strftime('%Y-%m-%d')}", "w")
