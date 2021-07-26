@@ -11,7 +11,36 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--start", help="This should be a date in the format yyyy-mm-dd")
 parser.add_argument("-e", "--end", help="This should be a date in the format yyyy-mm-dd")
 parser.add_argument("-w", "--weeks", help="How many weeks to fetch")
+parser.add_argument("-d", "--debug", help="Turn on debugging output.", action='store_true')
 args = parser.parse_args()
+
+def debugging():
+    return args.debug
+
+out_file = None
+if debugging():
+    out_file = open("log.html", "w")
+    out_file.write("<html>\n")
+    out_file.write("<head>\n")
+    out_file.write('''<style>
+    li.completed {
+        color: red;
+        font-style: italic;
+    }
+    li.progress {
+        color: darkgoldenrod;
+    }
+    li.planned {
+        color: darkgreen;
+    }
+    li.skipped {
+        color: red;
+        font-style: italic;
+    }
+</style>
+'''
+    )
+    out_file.write("</head>\n<body>\n")
 
 # Get the project ID from the URL in the Asana front-end and update here
 # Right now, this only supports single project, but if there are folks
@@ -26,7 +55,11 @@ except:
 
 # Add any section names you want to skip processing
 # for snippets. Case matters
-skip_sections = []
+skip_sections = [
+    "Next '20 Demo",
+    "DIY Home Video Studio",
+    "Set up OBS"
+]
 
 # Get our bounds for time established. Default is one week back from "now"
 start_date = datetime.datetime.now() - datetime.timedelta(weeks=1)
@@ -60,6 +93,9 @@ if args.end:
             sys.exit(1)
     if not args.start:
         start_date = end_date - datetime.timedelta(weeks=weeks)
+
+if debugging():
+    out_file.write(f"<h2>Fetching snippets from {start_date} to {end_date}</h2>\n")
 
 def create_snippet(task, file):
     section = task['section']
@@ -107,15 +143,25 @@ modified_tasks = []
 asana_client = asana.Client.access_token(access_token)
 sections = asana_client.sections.get_sections_for_project(project_id)
 for s in sections:
+    section_name = s['name']
+    if debugging():
+        out_file.write(f"<h3>Section: {section_name}</h3>\n")
     # Honoe our skip sections if you don't want one showing up, add the section name to the
     # array above and then it won't show up in our report
-    if s['name'] in skip_sections:
+    if section_name in skip_sections:
+        if debugging():
+            out_file.write(f"<ul><li class='skipped'>Skipping</li></ul>\n")
         continue
+
     tasks = asana_client.tasks.get_tasks_for_section(s['gid'],{'opt_fields':'name,notes,completed,created_at,modified_at,completed_at,subtasks,subtasks.name,subtasks.gid,subtasks.completed'})
+    if debugging():
+        out_file.write("<ul>\n")
     for task in tasks:
-        task['section'] = s['name']
+        task['section'] = section_name
         if task['completed']:
             complete_time = datetime.datetime.strptime(task['completed_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            if debugging():
+                out_file.write(f"<li class='completed'>Task: {task['name']}</li>\n")
             if complete_time > start_date and complete_time < end_date:
                 completed_tasks.append(task)
             continue
@@ -123,11 +169,17 @@ for s in sections:
         created_time = datetime.datetime.strptime(task['created_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
         if created_time > start_date and created_time < end_date:
             new_tasks.append(task)
+            if debugging():
+                out_file.write(f"<li class='planned'>Task: {task['name']}</li>\n")
             continue
 
         modified_time = datetime.datetime.strptime(task['modified_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
         if modified_time > start_date and modified_time < end_date:
             modified_tasks.append(task)
+            if debugging():
+                out_file.write(f"<li class='progress'>Task: {task['name']}</li>\n")
+    if debugging():
+        out_file.write("</ul>\n")
 
 snippets = open(f"Snippets_{start_date.strftime('%Y-%m-%d')}", "w")
 snippets.write("**COMPLETED:**\n\n")
@@ -141,3 +193,6 @@ for t in modified_tasks:
 snippets.write("\n**PLANNING:**\n\n")
 for t in new_tasks:
     create_snippet(t, snippets)
+
+if debugging():
+    out_file.write("</body>\n</html>\n")
