@@ -77,7 +77,7 @@ if args.start:
     try:
         start_date = datetime.datetime.strptime(args.start, "%Y-%m-%d")
     except:
-        print("Format for date must be yyyy/mm/dd")
+        print("Format for date must be yyyy-mm-dd")
         sys.exit(1)
     if not args.end:
         end_date = start_date + datetime.timedelta(weeks=weeks)
